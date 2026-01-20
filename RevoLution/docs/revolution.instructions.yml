@@ -1,0 +1,936 @@
+# revolution.copilot-instructions.yaml
+# Purpose: End-to-end build plan for a Python RevoLution research framework that includes:
+#   (1) algorithm implementation (NEAT + Novelty Search + Lifetime RL),
+#   (2) rigorous benchmarking against representative baselines,
+#   (3) scientific reporting artifacts (plots, tables, statistical tests, and paper-ready bundles),
+#   (4) OPTIONAL Cyberbotics Webots integration as a robotics benchmark backend (Phase 11).
+#
+# Non-goal: Do not claim "SOTA" results. The system must generate defensible comparisons and artifacts;
+# results come from experiments.
+
+meta:
+  project_name: "RevoLution"
+  description: >
+    Python library implementing the RevoLution algorithm plus a full scientific benchmarking and reporting pipeline.
+    RevoLution core: NEAT-based topology evolution + novelty search + lifetime RL (learning during evaluation).
+    Benchmarks: compare against representative baselines (RL-only, NEAT reward-only, NEAT novelty-only, etc.)
+    Reporting: multi-seed statistics, confidence intervals, significance tests, plots, and LaTeX/Markdown tables.
+  language: "Python"
+  python_version: ">=3.11"
+  license: "MIT"
+  repository_style:
+    layout: "src-layout"
+    docs: "markdown in /docs"
+    tests: "pytest"
+    formatting: "black + ruff"
+    typing: "mypy (strict for src/ where feasible)"
+    determinism: "seeded RNG everywhere; stable ordering and tie-breaks"
+  reproducibility_principles:
+    - "Every result must be reproducible from a single YAML config + code revision."
+    - "All stochastic algorithms must be evaluated over multiple independent seeds and reported with variability."
+    - "Use robust statistics and nonparametric tests for stochastic EC comparisons."
+    - "All figures/tables are generated from stored raw run artifacts, never from in-memory-only state."
+
+stack:
+  core_dependencies:
+    - name: "neat-python"
+      purpose: "NEAT population/speciation/structural mutation/crossover implementation"
+      notes:
+        - "Use neat-python for NEAT mechanics initially; avoid re-implementing NEAT."
+        - "Bridge neat-python genomes to a trainable policy representation."
+    - name: "torch"
+      purpose: "Trainable phenotype parameters and lifetime RL updates"
+      notes:
+        - "Start with a minimal RL inner loop (REINFORCE) implemented directly in PyTorch."
+        - "Add SB3 baselines once core loop is stable."
+    - name: "gymnasium"
+      purpose: "Environment interface standardization and spaces"
+    - name: "numpy"
+      purpose: "Descriptors, metrics, utilities"
+    - name: "PyYAML"
+      purpose: "Config I/O"
+    - name: "pydantic"
+      purpose: "Config schema validation and defaults"
+  benchmarking_dependencies:
+    - name: "stable-baselines3"
+      purpose: "RL-only baselines (PPO/A2C/DQN/etc.) and evaluation utilities"
+      notes:
+        - "Wrap env with Monitor before other wrappers when evaluating returns."
+        - "Use a standardized evaluate method across baselines."
+    - name: "scipy"
+      purpose: "Statistical tests + bootstrap utilities"
+    - name: "pandas"
+      purpose: "Run aggregation and table generation"
+    - name: "matplotlib"
+      purpose: "Publication-grade plots"
+    - name: "jinja2"
+      purpose: "Report templating to Markdown/LaTeX"
+  optional_dependencies:
+    - name: "wandb"
+      purpose: "Experiment tracking (optional; keep outputs local-first)"
+  dev_dependencies:
+    - "pytest"
+    - "pytest-xdist (optional)"
+    - "ruff"
+    - "black"
+    - "mypy"
+    - "types-PyYAML"
+
+copilot:
+  persona:
+    role: "senior Python ML engineer + evolutionary computation researcher"
+    priorities:
+      - "Correctness and reproducibility first"
+      - "Build a minimal vertical slice early, then extend toward full scientific reporting"
+      - "Strict separation: core algorithms vs benchmarking vs reporting"
+      - "Defensive engineering: deterministic ordering, seed control, serialization"
+  ground_rules:
+    - "No global random state. All randomness must come from injected RNG or deterministic seed-splitting."
+    - "Avoid nondeterministic iteration (dict/set) in scoring/selection/aggregation; always sort by stable keys."
+    - "No hidden singletons; all state explicit."
+    - "No performance claims; reporting pipeline must compute and display uncertainty."
+    - "Every baseline must share the same evaluation protocol and compute budget."
+    - "All report figures and tables must be generated from stored raw run artifacts, not from in-memory state."
+
+deliverables:
+  algorithm:
+    - "src/revolution: RevoLution engine (NEAT + novelty + lifetime RL)"
+    - "src/revolution/envs: reference environments + descriptor extractors"
+  benchmarking:
+    - "src/revolution/benchmarks: baseline implementations + shared evaluation protocols"
+    - "scripts/run_benchmark_suite.py: run multi-algorithm, multi-seed benchmarks"
+  reporting:
+    - "src/revolution/reporting: aggregation, stats tests, plotting, and report bundle export"
+    - "scripts/make_report.py: generate paper-ready artifacts (plots, tables, markdown/latex)"
+  experiments:
+    - "runs/: immutable run artifacts (config snapshot + raw logs + metrics)"
+    - "reports/: generated report bundles (versioned, reproducible)"
+  tests_and_docs:
+    - "tests/: determinism + invariants + smoke benchmarks"
+    - "docs/: architecture + benchmark protocol + reporting guidelines + extension guide"
+
+repo_layout:
+  root_files:
+    - "pyproject.toml"
+    - "README.md"
+    - "LICENSE"
+    - ".gitignore"
+    - "configs/ (YAML configs and neat-python cfg templates)"
+    - "docs/"
+    - "runs/ (gitignored)"
+    - "reports/ (gitignored)"
+  packages:
+    - path: "src/revolution"
+      modules:
+        - "__init__.py"
+        - "config.py"
+        - "seeding.py"
+        - "types.py"
+        - "utils.py"
+    - path: "src/revolution/neat_adapter"
+      modules:
+        - "__init__.py"
+        - "neat_config.py"
+        - "genome_bridge.py"
+        - "phenotype_torch.py"
+        - "recurrent_runtime.py"
+    - path: "src/revolution/rl"
+      modules:
+        - "__init__.py"
+        - "lifetime.py"
+        - "reinforce.py"
+        - "optim.py"
+        - "baselines.py"
+    - path: "src/revolution/novelty"
+      modules:
+        - "__init__.py"
+        - "descriptor.py"
+        - "distance.py"
+        - "archive.py"
+        - "knn.py"
+    - path: "src/revolution/evolution"
+      modules:
+        - "__init__.py"
+        - "engine.py"
+        - "evaluation.py"
+        - "selection.py"
+        - "stats.py"
+    - path: "src/revolution/envs"
+      modules:
+        - "__init__.py"
+        - "bandit.py"
+        - "gridworld.py"
+        - "wrappers.py"
+        - "descriptors.py"
+    - path: "src/revolution/benchmarks"
+      modules:
+        - "__init__.py"
+        - "protocols.py"
+        - "baselines_rl.py"
+        - "baselines_neat.py"
+        - "baselines_revolution.py"
+        - "runner.py"
+        - "registry.py"
+    - path: "src/revolution/reporting"
+      modules:
+        - "__init__.py"
+        - "io.py"
+        - "aggregate.py"
+        - "statistics.py"
+        - "plots.py"
+        - "tables.py"
+        - "bundle.py"
+        - "templates/"
+  scripts:
+    - "scripts/run_experiment.py"
+    - "scripts/run_benchmark_suite.py"
+    - "scripts/make_report.py"
+  tests:
+    - "tests/test_seeding_determinism.py"
+    - "tests/test_archive_knn.py"
+    - "tests/test_descriptor_determinism.py"
+    - "tests/test_neat_bridge_forward.py"
+    - "tests/test_lifetime_learning_reset.py"
+    - "tests/test_engine_smoke_deterministic.py"
+    - "tests/test_benchmark_protocol_budget.py"
+    - "tests/test_reporting_reproducible_bundle.py"
+
+determinism:
+  seed_policy:
+    master_seed: "int"
+    split_function: "numpy SeedSequence or custom splitmix64"
+    derived_seeds:
+      - "generation_seed"
+      - "genome_evaluation_seed"
+      - "environment_seed"
+      - "torch_seed"
+      - "bootstrap_seed"
+  rules:
+    - "Set seeds for: random, numpy, torch (CPU). Record torch/cudnn determinism flags if GPU used."
+    - "Disable nondeterministic torch ops where feasible; document limitations."
+    - "Sort genomes by stable genome_id before computing kNN and assigning scores."
+    - "For equal novelty/reward, tie-break by genome_id to ensure stable ranking."
+    - "Parallelism is optional; if enabled, enforce deterministic per-genome seeds and deterministic reduction order."
+
+key_concepts:
+  outer_loop:
+    description: >
+      Use neat-python to maintain population, speciation, and reproduction mechanics.
+      After evaluation, compute novelty scores and (optionally) reward constraints, then
+      feed a deterministic scalar selection score back into neat-python via genome.fitness.
+    requirements:
+      - "Fitness must be assigned deterministically."
+      - "Selection must align with novelty-primary scheme."
+      - "Species protection remains managed by NEAT."
+  inner_loop:
+    description: >
+      Each genome evaluation instantiates a phenotype (trainable policy).
+      During its lifetime, the agent learns via RL updates.
+      Outputs: reward summary + behavior descriptor (computed from trajectory).
+    requirements:
+      - "Reset phenotype to genome-initial parameters between evaluations (default)."
+      - "Ensure the lifetime RL run is reproducible given a seed."
+  novelty:
+    description: >
+      Compute novelty as average distance to k nearest neighbors in descriptor space,
+      considering both current population descriptors and an archive.
+    requirements:
+      - "Stable distance computation and tie-break ordering."
+      - "Archive update policy deterministic under a seed."
+  behavior_descriptor:
+    description: >
+      Descriptor must reflect behavior, not reward. It must be deterministic given
+      the trajectory and seed.
+    requirements:
+      - "Vector of floats (numpy.ndarray shape (D,))."
+      - "Provide normalization guidance per descriptor."
+      - "No reward leakage in descriptor components."
+
+public_interfaces:
+  environment:
+    protocol: "Gymnasium Env or thin wrapper"
+    required_methods:
+      - "reset(seed=...) -> (obs, info)"
+      - "step(action) -> (obs, reward, terminated, truncated, info)"
+      - "action_space, observation_space"
+  descriptor_extractor:
+    interface: "BehaviorDescriptorExtractor"
+    methods:
+      - "start_episode()"
+      - "on_step(obs, action, reward, next_obs, done, info)"
+      - "end_episode()"
+      - "finalize() -> np.ndarray"
+  distance_metric:
+    interface: "DistanceMetric"
+    methods:
+      - "distance(a: np.ndarray, b: np.ndarray) -> float"
+    defaults:
+      - "euclidean"
+      - "cosine (optional)"
+  novelty_archive:
+    interface: "NoveltyArchive"
+    methods:
+      - "consider_add(descriptor: np.ndarray, novelty: float, rng) -> bool"
+      - "query_all() -> list[np.ndarray]"
+  learning_rule:
+    interface: "LearningRule"
+    methods:
+      - "initialize(policy, rng_seed)"
+      - "on_step(log_prob, reward, done)"
+      - "end_episode()"
+      - "reset_to_initial(policy)"
+  phenotype:
+    interface: "TorchPolicy"
+    methods:
+      - "forward(obs) -> action_distribution"
+      - "act(obs, rng) -> action, log_prob"
+      - "reset_recurrent_state() (if recurrent)"
+
+implementation_choices:
+  lifetime_rl_initial_choice:
+    algorithm: "REINFORCE (discrete) with optional baseline"
+    rationale:
+      - "Minimal, transparent implementation"
+      - "Works with arbitrary differentiable policy networks"
+      - "Avoids SB3 constraints early"
+    notes:
+      - "Use torch.distributions.Categorical for discrete actions."
+      - "Add value baseline head later if needed."
+  environment_initial_choice:
+    env: "Multi-armed bandit (Gymnasium-style)"
+    descriptor: "action frequency vector over arms"
+    acceptance_target:
+      - "Demonstrate within-lifetime improvement qualitatively (log metric only)."
+      - "Do not encode 'learning succeeds' as a hard unit test requirement."
+
+neat_bridge:
+  objective: >
+    Convert neat-python genome into a trainable torch module (policy) supporting:
+      - feedforward graphs initially
+      - recurrence support as a second increment
+  plan:
+    step_1_feedforward_only:
+      - "Implement genome_bridge that reads neat-python genome connections/nodes."
+      - "Build a torch.nn.Module that computes node activations in topological order."
+      - "Represent each connection weight as torch.nn.Parameter."
+      - "Represent each node bias as torch.nn.Parameter."
+      - "Activation functions map from NEAT config -> torch ops."
+    step_2_add_recurrence:
+      - "Maintain a state vector for recurrent node outputs."
+      - "Compute feedforward contributions from current obs."
+      - "Add recurrent contributions from previous state snapshot."
+      - "Update state at end of forward pass."
+  constraints:
+    - "Forward pass deterministic given parameters and state."
+    - "Avoid Python-level per-connection loops in hot path if possible; optimize later."
+
+selection_scheme:
+  default: "constrained_novelty_lexicographic"
+  description: >
+    Primary ranking by novelty. Reward is used as:
+      - a viability constraint (min_reward) OR
+      - secondary tie-break within similar novelty.
+    Assign a scalar selection score to genome.fitness for neat-python to consume.
+  options:
+    min_reward:
+      enabled: true
+      threshold: 0.0
+      behavior: "genomes below threshold receive large penalty in selection score"
+    scoring:
+      novelty_weight: 1.0
+      reward_weight: 0.05
+      penalty_below_threshold: 1000000.0
+    tie_break:
+      - "novelty desc"
+      - "reward desc"
+      - "genome_id asc (stable)"
+
+novelty_scoring:
+  knn_k: 10
+  pool: "population + archive"
+  distance: "euclidean"
+  normalization:
+    enabled: false
+    notes:
+      - "Enable running-stat normalization later if descriptor dimensions differ significantly in scale."
+  archive_policy:
+    type: "threshold_add"
+    threshold:
+      initial: 1.0
+      adapt:
+        enabled: true
+        target_add_rate_per_gen: 0.05
+        increase_factor: 1.05
+        decrease_factor: 0.95
+    cap:
+      enabled: true
+      max_size: 5000
+      eviction: "fifo (deterministic)"
+
+evaluation:
+  episodes_per_genome: 3
+  max_steps_per_episode: 200
+  outputs_per_genome:
+    - "reward_mean"
+    - "reward_max"
+    - "reward_final_episode"
+    - "descriptor (np.ndarray)"
+    - "novelty_score"
+    - "learning_progress (optional)"
+  descriptor_timing:
+    - "Compute descriptor over post-learning trajectories (default)."
+    - "Optionally compute pre-learning descriptor for diagnostics."
+  lamarckian_mode:
+    enabled: false
+    behavior: "If enabled, write learned params back into genome init weights (explicit, opt-in)."
+
+logging:
+  outputs:
+    root_dir: "runs/"
+    run_id: "timestamp-seed"
+    files:
+      - "config.yaml"
+      - "metadata.json"
+      - "raw/episodes.parquet (or csv.gz)"
+      - "raw/generations.parquet"
+      - "raw/archive.parquet"
+      - "summary.csv"
+      - "checkpoints/ (optional)"
+  metrics_per_generation:
+    - "best_reward"
+    - "median_reward"
+    - "best_novelty"
+    - "archive_size"
+    - "num_species"
+    - "novelty_threshold (if adaptive)"
+  requirements:
+    - "Logging must not affect determinism (no random sampling for logs)."
+    - "Store raw per-episode data for reporting and statistical tests."
+
+scientific_benchmarking:
+  principles:
+    - "All algorithms compared under the same evaluation budget (environment steps)."
+    - "Run each algorithm across multiple independent random seeds; report variability."
+    - "For stochastic EC algorithms, report robust summaries (median/IQR) and nonparametric tests."
+  evaluation_units:
+    primary_budget: "environment_steps"
+    secondary_budget: "wall_clock_seconds (optional; only if measured precisely)"
+  result_storage:
+    - "Store raw per-episode returns and (if relevant) success flags for each seed and generation."
+    - "Store per-generation aggregates for efficiency, but never discard raw data."
+  protocol:
+    training_vs_eval:
+      - "Training: algorithm-specific learning/evolution steps."
+      - "Evaluation: fixed policy evaluation episodes with learning disabled unless the method requires online adaptation (then specify)."
+    sb3_guidance:
+      - "Wrap env with Monitor before other wrappers for RL baselines."
+      - "Use a common evaluation function (episodes, deterministic mode) across algorithms."
+
+baselines:
+  required:
+    - id: "revolution_full"
+      name: "RevoLution (NEAT + novelty + lifetime RL)"
+      category: "target"
+    - id: "neat_reward_only"
+      name: "NEAT (reward-only fitness)"
+      category: "evolution"
+      purpose: "Is novelty essential?"
+    - id: "neat_novelty_only"
+      name: "NEAT + novelty (no lifetime learning)"
+      category: "evolution"
+      purpose: "Is lifetime RL essential?"
+    - id: "rl_only_sb3_ppo"
+      name: "RL-only (SB3 PPO)"
+      category: "rl"
+      purpose: "Is evolution essential?"
+    - id: "random_policy"
+      name: "Random policy"
+      category: "sanity"
+      purpose: "Sanity lower bound"
+  optional_extended:
+    - id: "rl_only_sb3_a2c"
+      name: "RL-only (SB3 A2C)"
+      category: "rl"
+    - id: "rl_only_sb3_dqn"
+      name: "RL-only (SB3 DQN; discrete actions only)"
+      category: "rl"
+    - id: "revolution_no_novelty"
+      name: "RevoLution without novelty (reward constraint only)"
+      category: "ablation"
+    - id: "revolution_no_rl"
+      name: "RevoLution without lifetime RL (novelty + NEAT only)"
+      category: "ablation"
+    - id: "revolution_lamarckian"
+      name: "RevoLution (Lamarckian inheritance enabled)"
+      category: "ablation"
+
+reporting_artifacts:
+  per_run_artifacts:
+    - "config.yaml (immutable snapshot)"
+    - "metadata.json (git hash, python/package versions, OS/hardware summary if available)"
+    - "raw/episodes.parquet (or csv.gz): per-episode returns, lengths, timestamps"
+    - "raw/generations.parquet: per-generation metrics"
+    - "raw/archive.parquet: archive size and threshold dynamics"
+    - "checkpoints/ (optional)"
+  aggregated_artifacts:
+    - "agg/learning_curves.csv: aligned curves across seeds per algorithm"
+    - "agg/final_scores.csv: final performance distribution per seed"
+    - "agg/stat_tests.json: pairwise significance tests and effect sizes"
+    - "figures/*.pdf + *.png"
+    - "tables/*.tex + *.md"
+    - "report.md + report.tex (optional)"
+
+statistics_and_tests:
+  summary_statistics:
+    required:
+      - "mean"
+      - "standard_error"
+      - "95pct_confidence_interval (bootstrap)"
+      - "median"
+      - "iqr"
+  confidence_intervals:
+    method: "bootstrap"
+    bootstrap_samples: 5000
+    ci_level: 0.95
+    seed_for_bootstrap: "fixed derived seed to ensure reproducibility"
+  hypothesis_tests:
+    default:
+      - test: "wilcoxon_signed_rank"
+        applicability: "paired comparisons across identical seeds"
+        alpha: 0.05
+      - test: "mann_whitney_u"
+        applicability: "unpaired comparisons"
+        alpha: 0.05
+    multiple_comparisons:
+      correction: "holm"
+  effect_sizes:
+    required:
+      - "cliffs_delta"
+      - "auc_difference"
+  learning_curve_metrics:
+    required:
+      - "AUC (area under curve) over budget"
+      - "final_mean_return"
+      - "final_median_return"
+      - "time_to_threshold (if threshold defined)"
+  constraints:
+    - "All statistical computations must be performed from stored raw data."
+    - "All plots/tables must reference exact budgets and seeds used."
+
+plots:
+  figure_set_minimal:
+    - id: "learning_curve_mean_ci"
+      description: "Mean return vs steps with 95% CI (bootstrap)"
+      x_axis: "environment_steps"
+      y_axis: "episodic_return"
+      style: "lines + shaded CI"
+    - id: "learning_curve_median_iqr"
+      description: "Median return vs steps with IQR band"
+      x_axis: "environment_steps"
+      y_axis: "episodic_return"
+    - id: "final_boxplot"
+      description: "Final performance distribution across seeds"
+      x_axis: "algorithm"
+      y_axis: "final_return"
+    - id: "archive_dynamics"
+      description: "Archive size and novelty threshold over generations (RevoLution variants)"
+      x_axis: "generation"
+      y_axis: "archive_size, novelty_threshold"
+    - id: "species_dynamics"
+      description: "Number of species over generations (NEAT-based variants)"
+      x_axis: "generation"
+      y_axis: "num_species"
+  figure_set_optional:
+    - id: "pairwise_significance_heatmap"
+      description: "Heatmap of p-values/effect sizes across algorithms"
+    - id: "sample_efficiency"
+      description: "Return vs wall-clock (optional; only if measured precisely)"
+
+tables:
+  required_tables:
+    - id: "main_results"
+      description: "Final performance and AUC with uncertainty"
+      columns:
+        - "Algorithm"
+        - "Final mean ± SE"
+        - "Final median (IQR)"
+        - "AUC mean ± SE"
+        - "Success rate (if defined)"
+    - id: "pairwise_tests"
+      description: "Pairwise comparison vs RevoLution (p-values + effect sizes)"
+      columns:
+        - "Baseline"
+        - "Metric"
+        - "p-value (Holm corrected)"
+        - "Effect size (Cliff's delta)"
+        - "Direction"
+  export_formats:
+    - "Markdown"
+    - "LaTeX"
+
+paper_ready_bundle:
+  goals:
+    - "Produce a self-contained artifact bundle suitable for inclusion in an academic paper appendix."
+    - "Include enough metadata to satisfy reproducibility expectations."
+  includes:
+    - "report.md"
+    - "figures/"
+    - "tables/"
+    - "agg/"
+    - "metadata.json"
+    - "config_snapshots/"
+  narrative_template_requirements:
+    reproducibility_section:
+      - "seeds used"
+      - "compute budget"
+      - "hardware + versions"
+      - "hyperparameters"
+      - "evaluation protocol"
+      - "error bars / CI / tests"
+    baselines_section:
+      - "why these baselines are representative"
+      - "how budgets were matched"
+    limitations_section:
+      - "descriptor dependence"
+      - "compute cost"
+      - "transfer assumptions"
+
+phases:
+  - name: "Phase 0 - Scaffolding and quality gates"
+    tasks:
+      - "Create src-layout package and pyproject.toml with dependency ranges"
+      - "Configure ruff, black, mypy, pytest"
+      - "Implement revolution/seeding.py with deterministic seed splitting"
+      - "Add tests for deterministic seed splitting and stable ordering helpers"
+      - "Create scripts/run_experiment.py, scripts/run_benchmark_suite.py, scripts/make_report.py with --help"
+    acceptance:
+      - "pytest passes"
+      - "ruff + mypy run clean for baseline"
+      - "scripts print help and exit 0"
+
+  - name: "Phase 1 - Minimal environment + descriptor"
+    tasks:
+      - "Implement Gymnasium-style MultiArmedBanditEnv"
+      - "Implement ActionFrequencyDescriptorExtractor"
+      - "Add determinism tests: same trajectory -> same descriptor"
+      - "Add sample random rollout script"
+    acceptance:
+      - "Bandit env runs; descriptor matches expected histogram"
+
+  - name: "Phase 2 - Novelty archive + kNN novelty"
+    tasks:
+      - "Implement EuclideanDistanceMetric"
+      - "Implement kNN novelty scoring with stable ordering and tie-breaks"
+      - "Implement NoveltyArchive with threshold_add + cap + deterministic eviction"
+      - "Tests for novelty ranking and archive policy determinism"
+    acceptance:
+      - "kNN novelty matches hand calculations on toy sets"
+      - "Archive behavior stable under fixed seed"
+
+  - name: "Phase 3 - NEAT integration (no RL yet)"
+    tasks:
+      - "Integrate neat-python population loop"
+      - "Define evaluation hook: phenotype acts without learning"
+      - "Compute descriptor + novelty; assign genome.fitness from selection score"
+      - "Run 5-generation smoke test on bandit"
+      - "Persist run artifacts (config snapshot, metadata, raw episodes)"
+    acceptance:
+      - "Deterministic run outputs for fixed seed"
+      - "Artifacts stored under runs/<run_id>/"
+
+  - name: "Phase 4 - Genome -> Torch phenotype (trainable policy)"
+    tasks:
+      - "Implement genome_bridge to torch module (feedforward first)"
+      - "Discrete action head returning logits"
+      - "Forward-pass determinism tests on a fixed micro-genome"
+      - "Parameter mapping tests: genome weights/biases <-> torch Parameters"
+    acceptance:
+      - "Policy forward deterministic and stable"
+      - "Parameters mapped 1:1 and round-trippable"
+
+  - name: "Phase 5 - Lifetime RL (REINFORCE) + reset semantics"
+    tasks:
+      - "Implement REINFORCE inner loop in torch"
+      - "Enforce Darwinian default: reset phenotype params after each genome evaluation"
+      - "Add tests:
+          - params change within lifetime
+          - reset restores initial params exactly
+          - NoLearning keeps params unchanged"
+      - "Log learning diagnostics (grad norms, loss) for analysis"
+    acceptance:
+      - "Reset semantics proven by tests"
+      - "Lifetime RL runs without exceptions and produces logged diagnostics"
+
+  - name: "Phase 6 - Full RevoLution engine"
+    tasks:
+      - "Combine NEAT + novelty + lifetime RL into EvolutionEngine"
+      - "Implement constrained novelty selection scoring"
+      - "Ensure logging includes all fields needed for reporting (raw episodes + per-gen aggregates)"
+      - "20-generation deterministic smoke run on bandit"
+    acceptance:
+      - "Same seed -> identical aggregated outputs"
+      - "No missing fields for downstream reporting"
+
+  - name: "Phase 7 - Recurrence + gridworld + richer descriptors"
+    tasks:
+      - "Add recurrent runtime support in phenotype (state vector + reset)"
+      - "Implement simple gridworld env (discrete actions)"
+      - "Add visitation-heatmap descriptor (downsampled) + final position"
+      - "Smoke run with NEAT variants and RevoLution"
+      - "Determinism tests for descriptor and state reset"
+    acceptance:
+      - "Recurrent state resets correctly"
+      - "Descriptor determinism tests pass"
+
+  - name: "Phase 8 - Benchmark framework (baselines + budgets + protocols)"
+    tasks:
+      - "Implement BenchmarkProtocol abstraction:
+          - env factory
+          - budget definition (steps)
+          - evaluation episodes and evaluation frequency
+          - seed list"
+      - "Implement Baseline Registry:
+          - RevoLution variants
+          - NEAT reward-only
+          - NEAT novelty-only
+          - RL-only SB3 PPO (+ optional A2C/DQN)"
+      - "Implement shared budget enforcement and tests that budgets are matched"
+      - "Implement standardized evaluation:
+          - periodic evaluation every N steps/generations
+          - evaluation episodes with learning disabled unless defined online"
+      - "Implement SB3 runners with consistent wrappers and evaluation method"
+    acceptance:
+      - "run_benchmark_suite.py runs >=2 algorithms x >=5 seeds with comparable artifacts"
+      - "Budget enforcement tests pass"
+
+  - name: "Phase 9 - Reporting pipeline (aggregation, stats, plots, tables)"
+    tasks:
+      - "Implement RunLoader:
+          - discover runs
+          - load raw episodes + per-gen metrics
+          - validate schema and budgets"
+      - "Implement Aggregator:
+          - align curves on common x-axis (environment steps)
+          - compute mean/SE, median/IQR
+          - bootstrap CIs reproducibly"
+      - "Implement StatisticalTests:
+          - paired Wilcoxon for matched seeds
+          - Holm correction
+          - Cliff's delta
+          - export stat_tests.json"
+      - "Implement Plots:
+          - mean+CI learning curve
+          - median+IQR learning curve
+          - final boxplot
+          - archive/species dynamics"
+      - "Implement Tables:
+          - Markdown + LaTeX exports"
+      - "Implement make_report.py:
+          - generates report.md + report bundle directory with figures/tables/agg/metadata"
+      - "Add tests:
+          - report generation deterministic given fixed set of run artifacts
+          - aggregated CSV/JSON regenerate identically (hash checks)"
+    acceptance:
+      - "reports/<report_id>/ created from runs/ with all required artifacts"
+      - "report.md includes reproducibility section (seeds, budgets, versions, CIs/tests)"
+
+  - name: "Phase 10 - Paper-style narrative template + reproducibility mapping"
+    tasks:
+      - "Add reporting/templates/report.md.j2 including:
+          - Summary
+          - Methods: algorithms, hyperparams, budgets, seeds
+          - Results: auto-inserted figures/tables
+          - Statistical testing summary
+          - Limitations"
+      - "Add reporting/templates/repro_checklist.md.j2 including:
+          - code version
+          - hyperparams listing
+          - budgets
+          - variability reporting"
+      - "Export a self-contained report bundle (optionally zip)"
+    acceptance:
+      - "A single command produces a paper-ready bundle from stored runs"
+
+  - name: "Phase 11 - Webots integration (optional) + robotics benchmark suite"
+    goals:
+      - "Add Cyberbotics Webots tasks as an optional environment backend"
+      - "Run robotics benchmarks through the same benchmarking/reporting pipeline"
+      - "Quantify and report reproducibility/determinism limitations explicitly"
+    tasks:
+      - "Create src/revolution/integrations/webots with strict optional dependency boundaries"
+      - "Write installation.md:
+          - how to install Webots
+          - how to set WEBOTS_HOME / controller paths
+          - how to run worlds headless"
+      - "Implement a Gymnasium-compatible WebotsEnvBase:
+          - reset(seed) and step(action)
+          - action_space/observation_space
+          - deterministic seed plumbing into controller"
+      - "Implement Supervisor-based reset utilities:
+          - reset simulation and/or reload world (document which is used)"
+      - "Implement Task 1 (mandatory): inverted pendulum world + controller + Gym wrapper"
+      - "Implement Task 2 (optional): line follower"
+      - "Implement Task 3 (optional): maze navigation"
+      - "Implement Webots-specific descriptors and determinism drift checks"
+      - "Integrate Webots tasks into benchmark registry:
+          - add a webots benchmark suite config generator"
+      - "Extend reporting to include:
+          - determinism drift plot
+          - throughput plot (steps/sec)
+          - metadata table row for Webots version and settings"
+    acceptance:
+      - "A single command runs Webots inverted pendulum benchmark for:
+          - revolution_full
+          - neat_reward_only
+          - neat_novelty_only
+          - rl_only_sb3_ppo
+        across >=5 seeds and generates a report bundle."
+      - "Report bundle includes:
+          - learning curves + final boxplot
+          - determinism drift plot (per seed)
+          - metadata including Webots version, timestep, rendering mode"
+      - "If determinism check fails, report explicitly flags affected runs (do not hide)."
+
+webots_addendum:
+  enabled_as_optional_plugin: true
+  optional_dependency_group: "webots"
+  stack:
+    optional_dependencies:
+      - name: "webots (runtime)"
+        purpose: "Webots simulator runtime (installed externally; not a pip dependency)"
+        notes:
+          - "Pin exact Webots version in benchmark metadata for reproducibility."
+      - name: "deepbots (optional)"
+        purpose: "Gym-style bridge between Webots and RL agents"
+        notes:
+          - "Use if it reduces boilerplate; keep minimal official-style env wrapper first."
+  repo_layout_extension:
+    packages:
+      - path: "src/revolution/integrations/webots"
+        modules:
+          - "__init__.py"
+          - "installation.md"
+          - "webots_env_base.py"
+          - "supervisor_control.py"
+          - "repro_checks.py"
+          - "descriptors.py"
+          - "benchmark_suite.py"
+          - "worlds/"
+          - "tasks/"
+          - "tasks/inverted_pendulum.py"
+          - "tasks/line_follower.py"
+          - "tasks/navigation_maze.py"
+  determinism:
+    webots_reproducibility_constraints:
+      - "Record Webots version, OS, CPU, physics timestep, rendering mode."
+      - "Prefer environment-step budget for fairness; record wall-clock as secondary."
+      - "Run a pre-benchmark reproducibility check suite per seed; mark non-reproducible runs."
+    reproducibility_check_suite:
+      steps:
+        - "Run N short episodes twice with identical seeds and reset procedure."
+        - "Compute drift metric: L2 distance between key state vectors at checkpoints OR hash of quantized states."
+        - "If drift exceeds tolerance, set run flag non_reproducible=true; still store artifacts."
+      outputs:
+        - "raw/repro_check.json"
+        - "raw/state_hashes.csv (optional)"
+  behavior_descriptors:
+    inverted_pendulum:
+      descriptor: "summary stats: mean pole angle, std pole angle, mean cart position, episode length"
+      distance: "euclidean"
+    line_follower:
+      descriptor: "path coverage + steering histogram + lap time (avoid raw reward)"
+      distance: "euclidean"
+    navigation_maze:
+      descriptor: "downsampled visitation heatmap + final pose + collision count"
+      distance: "euclidean"
+  reporting_extensions:
+    additional_plots:
+      - id: "determinism_drift"
+        description: "Reset drift magnitude vs episode index (per seed) for Webots tasks"
+        x_axis: "episode"
+        y_axis: "drift_metric"
+      - id: "throughput"
+        description: "Environment steps per second (wall-clock), secondary metric"
+        x_axis: "time"
+        y_axis: "steps_per_second"
+
+config_schema:
+  example_configs:
+    - "configs/example_bandit_revolution.yaml"
+    - "configs/example_bandit_benchmark_suite.yaml"
+    - "configs/example_gridworld_benchmark_suite.yaml"
+    - "configs/example_webots_inverted_pendulum_benchmark_suite.yaml"
+  benchmark_suite_fields:
+    seed_set:
+      mode: "explicit_list"
+      seeds: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    budget:
+      unit: "environment_steps"
+      total_steps: 2000000
+      eval_every_steps: 50000
+      eval_episodes: 20
+    algorithms:
+      - "revolution_full"
+      - "neat_reward_only"
+      - "neat_novelty_only"
+      - "rl_only_sb3_ppo"
+    reporting:
+      output_dir: "reports"
+      metrics:
+        - "episodic_return"
+      statistics:
+        ci: "bootstrap"
+        tests: ["wilcoxon_signed_rank"]
+        correction: "holm"
+      plots: ["learning_curve_mean_ci", "final_boxplot", "learning_curve_median_iqr"]
+      tables: ["main_results", "pairwise_tests"]
+  webots_backend_fields:
+    env:
+      backend: "webots"
+      name: "inverted_pendulum_webots"
+      webots:
+        world: "inverted_pendulum.wbt"
+        basicTimeStep: 16
+        headless: true
+        rendering: false
+        reset_mode: "supervisor_reset"
+        determinism_check:
+          enabled: true
+          episodes: 10
+          tolerance: 0.001
+
+review_checklist:
+  algorithm_correctness:
+    - "Darwinian default: learned parameters not inherited unless explicitly enabled."
+    - "No reward leakage into descriptors."
+    - "Novelty computed on population+archive with stable ordering/tie-break."
+  benchmarking_fairness:
+    - "Matched budgets across algorithms."
+    - "Same seed sets per algorithm (paired comparisons where possible)."
+    - "Same evaluation protocol (eval episodes, eval frequency)."
+    - "SB3 evaluation protocol consistent and documented."
+  reporting_rigor:
+    - "Error bars/CI and/or significance tests included for main comparisons."
+    - "Median/IQR tables available for stochastic algorithms."
+    - "All figures/tables generated from stored raw artifacts."
+    - "Report includes explicit budgets, seeds, versions, and config snapshots."
+  reproducibility:
+    - "Each run has config snapshot, metadata (versions), and raw data retained."
+    - "make_report.py regenerates identical aggregated CSV/JSON for same inputs."
+  webots_specific:
+    - "Webots version and timestep recorded."
+    - "Determinism drift quantified and shown; non-reproducible runs flagged, not hidden."
+
+starting_tasks_for_copilot:
+  - "Implement Phases 0-2 first (env + novelty + determinism)."
+  - "Get Phase 3 running end-to-end (NEAT novelty-only) with stored raw episodes."
+  - "Add Phases 4-6 (torch phenotype + lifetime RL + full RevoLution)."
+  - "Add Phase 8 (baselines + benchmark protocols) before heavy optimization."
+  - "Add Phases 9-10 (reporting + paper bundle) and ensure one-command reproducible reports."
+  - "Only then add Phase 11 (Webots) as an optional plugin track."
+
+notes:
+  - "Keep initial benchmark suites small (bandit + gridworld) to validate the pipeline."
+  - "Once stable, extend to more Gymnasium tasks (prefer discrete actions early for baseline parity)."
+  - "Avoid ambiguous metrics; define each metric precisely in code and in the report template."
+  - "Do not optimize prematurely. Profile only after correctness + determinism are proven."
