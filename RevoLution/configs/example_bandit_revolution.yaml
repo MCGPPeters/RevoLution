@@ -1,0 +1,25 @@
+experiment:
+  seed: 123
+  generations: 5
+  episodes_per_genome: 3
+  neat:
+    config_path: "neat_bandit.cfg"
+  env:
+    reward_probs: [0.1, 0.5, 0.9]
+    max_steps: 50
+  novelty:
+    k: 5
+    threshold_initial: 1.0
+    threshold_adapt: true
+    target_add_rate_per_gen: 0.05
+    increase_factor: 1.05
+    decrease_factor: 0.95
+    archive_max_size: 1000
+  selection:
+    min_reward_enabled: true
+    min_reward_threshold: 0.0
+    novelty_weight: 1.0
+    reward_weight: 0.05
+    penalty_below_threshold: 1000000.0
+  output_dir: "runs"
+  run_id: null

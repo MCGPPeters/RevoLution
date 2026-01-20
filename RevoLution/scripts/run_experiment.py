@@ -7,6 +7,8 @@ from __future__ import annotations
 
 import argparse
 
+from revolution.evolution import run_experiment
+
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -15,7 +17,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--config",
         type=str,
-        required=False,
+        required=True,
         help="Path to a YAML config file.",
     )
     return parser
@@ -23,8 +25,9 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> int:
     parser = build_parser()
-    _args = parser.parse_args()
-    # Phase 0: no execution logic yet. We exit cleanly after parsing.
+    args = parser.parse_args()
+    run_dir = run_experiment(args.config)
+    print(f"Run artifacts stored in: {run_dir}")
     return 0
 
 

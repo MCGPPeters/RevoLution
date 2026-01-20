@@ -55,3 +55,15 @@ def derive_seeds(master_seed: int, labels: Iterable[str]) -> dict[str, int]:
     splitter = SeedSplitter(master_seed)
     child_seeds = splitter.spawn(len(label_list))
     return dict(zip(label_list, child_seeds, strict=True))
+
+
+def derive_seed(master_seed: int, *tokens: int) -> int:
+    """Derive a single deterministic seed from a master seed + tokens.
+
+    This is useful when you need per-episode or per-genome seeds that are
+    stable across runs. The tokens should be integers (e.g., generation id,
+    genome id, episode index).
+    """
+
+    seed_sequence = np.random.SeedSequence([master_seed, *tokens])
+    return int(seed_sequence.generate_state(1, dtype=np.uint32)[0])

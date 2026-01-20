@@ -3,11 +3,15 @@
 This package will grow as we implement phases of the research framework.
 """
 
-from .seeding import SeedSplitter, derive_seeds
+from .config import ExperimentConfig, RootConfig
+from .seeding import SeedSplitter, derive_seed, derive_seeds
 from .utils import stable_sorted
 
 __all__ = [
+    "ExperimentConfig",
+    "RootConfig",
     "SeedSplitter",
+    "derive_seed",
     "derive_seeds",
     "stable_sorted",
 ]
