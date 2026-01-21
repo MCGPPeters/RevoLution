@@ -1,0 +1,20 @@
+suite:
+  name: "webots_inverted_pendulum_stub"
+  env:
+    name: "webots"
+    world: "inverted_pendulum.wbt"
+    basic_time_step: 16
+    headless: true
+    rendering: false
+    reset_mode: "supervisor_reset"
+  neat_config: "neat_bandit.cfg"
+  episodes_per_genome: 1
+  seeds: [0, 1, 2, 3, 4]
+  algorithms:
+    - "revolution_full"
+    - "neat_reward_only"
+  budget:
+    total_steps: 1000
+    eval_every_steps: 200
+    eval_episodes: 5
+  output_dir: "runs"

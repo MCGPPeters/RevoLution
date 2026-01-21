@@ -17,6 +17,16 @@ class BanditEnvConfig(BaseModel):
     max_steps: int = 200
 
 
+class WebotsEnvConfigModel(BaseModel):
+    """Configuration for Webots environments."""
+
+    world: str
+    basic_time_step: int
+    headless: bool = True
+    rendering: bool = False
+    reset_mode: str = "supervisor_reset"
+
+
 class NeatConfig(BaseModel):
     """NEAT configuration wrapper (points to neat-python config file)."""
 

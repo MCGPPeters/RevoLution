@@ -3,7 +3,7 @@
 This package will grow as we implement phases of the research framework.
 """
 
-from .config import ExperimentConfig, RootConfig
+from .config import ExperimentConfig, RootConfig, WebotsEnvConfigModel
 from .rl import NoLearningRule, ReinforceLearner
 from .seeding import SeedSplitter, derive_seed, derive_seeds
 from .utils import stable_sorted
@@ -11,6 +11,7 @@ from .utils import stable_sorted
 __all__ = [
     "ExperimentConfig",
     "RootConfig",
+    "WebotsEnvConfigModel",
     "NoLearningRule",
     "ReinforceLearner",
     "SeedSplitter",
