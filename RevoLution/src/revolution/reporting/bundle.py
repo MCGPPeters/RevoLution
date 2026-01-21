@@ -62,6 +62,7 @@ def generate_report_bundle(runs_dir: str, output_dir: str) -> ReportBundle:
 
     report_path = output / "report.md"
     _render_report(report_path, aggregate.learning_curves, aggregate.final_scores)
+    _render_repro_checklist(output / "repro_checklist.md")
 
     metadata_path = output / "metadata.json"
     with open(metadata_path, "w", encoding="utf-8") as handle:
@@ -87,5 +88,14 @@ def _render_report(
         num_points=len(learning_curves),
         num_runs=len(final_scores),
     )
+    with open(report_path, "w", encoding="utf-8") as handle:
+        handle.write(content)
+
+
+def _render_repro_checklist(report_path: Path) -> None:
+    templates_dir = Path(__file__).parent / "templates"
+    env = Environment(loader=FileSystemLoader(str(templates_dir)), autoescape=False)
+    template = env.get_template("repro_checklist.md.j2")
+    content = template.render()
     with open(report_path, "w", encoding="utf-8") as handle:
         handle.write(content)

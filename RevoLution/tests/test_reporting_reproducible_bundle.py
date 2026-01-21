@@ -43,3 +43,11 @@ def test_report_bundle_deterministic(tmp_path: Path) -> None:
     report_one = Path(bundle_one.report_path).read_text(encoding="utf-8")
     report_two = Path(bundle_two.report_path).read_text(encoding="utf-8")
     assert report_one == report_two
+
+    checklist_one = (
+        Path(bundle_one.report_path).parent / "repro_checklist.md"
+    ).read_text(encoding="utf-8")
+    checklist_two = (
+        Path(bundle_two.report_path).parent / "repro_checklist.md"
+    ).read_text(encoding="utf-8")
+    assert checklist_one == checklist_two

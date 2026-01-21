@@ -4,7 +4,29 @@ title: RevoLution Report
 
 # RevoLution Report
 
+## Summary
+
 - Runs analyzed: {{ num_runs }}
 - Learning curve points: {{ num_points }}
 
-Figures and tables are available in `figures/` and `tables/`.
+## Methods
+
+- Algorithms: RevoLution and baselines as specified in the benchmark suite.
+- Budgets: total environment steps; evaluation frequency per protocol.
+- Seeds: see run metadata and benchmark suite config.
+
+## Results
+
+- Figures: `figures/`
+- Tables: `tables/`
+
+## Statistical Tests
+
+- Nonparametric tests (Wilcoxon / Mann-Whitney) and effect sizes.
+- Confidence intervals via bootstrap.
+
+## Limitations
+
+- Descriptor dependence
+- Compute cost
+- Transfer assumptions
