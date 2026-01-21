@@ -1,21 +1,20 @@
-"""Entry point for running a benchmark suite across algorithms.
-
-Phase 0 placeholder: CLI wiring only.
-"""
+"""Entry point for running a benchmark suite across algorithms."""
 
 from __future__ import annotations
 
 import argparse
 
+from revolution.benchmarks import run_benchmark_suite
+
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Run a benchmark suite (placeholder)."
+        description="Run a benchmark suite."
     )
     parser.add_argument(
         "--suite-config",
         type=str,
-        required=False,
+        required=True,
         help="Path to a benchmark suite YAML config.",
     )
     return parser
@@ -23,8 +22,9 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> int:
     parser = build_parser()
-    _args = parser.parse_args()
-    # Phase 0: no execution logic yet. We exit cleanly after parsing.
+    args = parser.parse_args()
+    results = run_benchmark_suite(args.suite_config)
+    print(f"Completed {len(results)} runs.")
     return 0
 
 

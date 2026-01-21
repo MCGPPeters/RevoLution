@@ -1,0 +1,17 @@
+suite:
+  name: "bandit_smoke"
+  env:
+    name: "bandit"
+    reward_probs: [0.1, 0.5, 0.9]
+    max_steps: 10
+  neat_config: "neat_bandit.cfg"
+  episodes_per_genome: 2
+  seeds: [0, 1, 2, 3, 4]
+  algorithms:
+    - "revolution_full"
+    - "neat_reward_only"
+  budget:
+    total_steps: 2000
+    eval_every_steps: 500
+    eval_episodes: 5
+  output_dir: "runs"
