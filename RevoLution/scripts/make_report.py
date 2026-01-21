@@ -1,16 +1,15 @@
-"""Entry point for report generation.
-
-Phase 0 placeholder: CLI wiring only.
-"""
+"""Entry point for report generation."""
 
 from __future__ import annotations
 
 import argparse
 
+from revolution.reporting import generate_report_bundle
+
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Generate a report bundle from stored runs (placeholder)."
+        description="Generate a report bundle from stored runs."
     )
     parser.add_argument(
         "--runs-dir",
@@ -29,8 +28,9 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> int:
     parser = build_parser()
-    _args = parser.parse_args()
-    # Phase 0: no execution logic yet. We exit cleanly after parsing.
+    args = parser.parse_args()
+    bundle = generate_report_bundle(args.runs_dir, args.output_dir)
+    print(f"Report generated: {bundle.report_path}")
     return 0
 
 
