@@ -2,5 +2,10 @@
 
 from .genome_bridge import build_feedforward_policy
 from .phenotype_torch import TorchFeedForwardPolicy
+from .recurrent_runtime import TorchRecurrentPolicy
 
-__all__ = ["TorchFeedForwardPolicy", "build_feedforward_policy"]
+__all__ = [
+    "TorchFeedForwardPolicy",
+    "TorchRecurrentPolicy",
+    "build_feedforward_policy",
+]
