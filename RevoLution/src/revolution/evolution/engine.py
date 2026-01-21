@@ -1,4 +1,4 @@
-"""Phase 3 evolution engine (NEAT + novelty, no lifetime RL yet)."""
+"""Phase 6 evolution engine (NEAT + novelty + lifetime RL)."""
 
 from __future__ import annotations
 
@@ -14,6 +14,7 @@ from typing import Any, Callable, cast
 
 import neat
 import numpy as np
+import torch
 import yaml
 from gymnasium import spaces
 from numpy.typing import NDArray
@@ -21,6 +22,7 @@ from numpy.typing import NDArray
 from revolution.config import ExperimentConfig, RootConfig
 from revolution.envs.bandit import BanditConfig, MultiArmedBanditEnv
 from revolution.envs.descriptors import ActionFrequencyDescriptorExtractor
+from revolution.neat_adapter.genome_bridge import build_feedforward_policy
 from revolution.novelty.archive import (
     ArchiveCapConfig,
     ArchiveConfig,
@@ -29,6 +31,8 @@ from revolution.novelty.archive import (
 )
 from revolution.novelty.distance import EuclideanDistanceMetric
 from revolution.novelty.knn import compute_knn_novelty
+from revolution.rl import NoLearningRule, ReinforceLearner
+from revolution.rl.reinforce import ReinforceConfig
 from revolution.seeding import derive_seed
 from revolution.utils import stable_sorted
 
@@ -116,7 +120,16 @@ def _build_evaluator(
 
     _init_csv(
         episodes_path,
-        ["generation", "genome_id", "episode", "reward", "steps", "descriptor"],
+        [
+            "generation",
+            "genome_id",
+            "episode",
+            "reward",
+            "steps",
+            "descriptor",
+            "loss",
+            "grad_norm",
+        ],
     )
     _init_csv(
         generations_path,
@@ -152,13 +165,17 @@ def _build_evaluator(
         raw_rewards: list[float] = []
 
         for genome_id, genome in ordered:
-            network = neat.nn.FeedForwardNetwork.create(genome, neat_config)
+            policy = build_feedforward_policy(genome, neat_config)
+            learner = _build_lifetime_learner(config)
+            init_seed = derive_seed(config.seed, generation, genome_id, 0, 999)
+            learner.initialize(policy, rng_seed=init_seed)
 
             reward_mean, descriptor_mean, episode_logs = _evaluate_genome(
                 config=config,
                 bandit_config=bandit_config,
                 genome_id=genome_id,
-                network=network,
+                policy=policy,
+                learner=learner,
                 generation=generation,
             )
 
@@ -230,7 +247,8 @@ def _evaluate_genome(
     config: ExperimentConfig,
     bandit_config: BanditConfig,
     genome_id: int,
-    network: neat.nn.FeedForwardNetwork,
+    policy: torch.nn.Module,
+    learner: ReinforceLearner | NoLearningRule,
     generation: int,
 ) -> tuple[float, NDArray[np.floating[Any]], list[dict[str, object]]]:
     """Evaluate a genome across multiple episodes and return aggregated results."""
@@ -248,23 +266,27 @@ def _evaluate_genome(
     for episode in range(config.episodes_per_genome):
         seed = derive_seed(config.seed, generation, genome_id, episode)
         _obs, _info = env.reset(seed=seed)
+        torch.manual_seed(seed)
 
         extractor = ActionFrequencyDescriptorExtractor(num_actions=num_actions)
         extractor.start_episode()
+        learner.start_episode()
 
         done = False
         total_reward = 0.0
         steps = 0
         while not done:
-            action = _select_action(network, _obs)
+            action, log_prob = _sample_action(policy, _obs)
             _obs, reward, _terminated, truncated, _info = env.step(action)
             extractor.on_step(action)
+            learner.on_step(log_prob, reward)
             total_reward += reward
             steps += 1
             done = truncated
 
         extractor.end_episode()
         descriptor = extractor.finalize()
+        diagnostics = learner.end_episode()
 
         episode_rewards.append(total_reward)
         episode_descriptors.append(descriptor)
@@ -276,6 +298,8 @@ def _evaluate_genome(
                 "reward": total_reward,
                 "steps": steps,
                 "descriptor": json.dumps(descriptor.tolist()),
+                "loss": diagnostics["loss"],
+                "grad_norm": diagnostics["grad_norm"],
             }
         )
 
@@ -286,17 +310,34 @@ def _evaluate_genome(
         else np.zeros(num_actions, dtype=np.float32)
     )
 
+    learner.reset_to_initial(policy)
     return reward_mean, descriptor_mean, episode_logs
 
 
-def _select_action(
-    network: neat.nn.FeedForwardNetwork, obs: NDArray[np.floating[Any]]
-) -> int:
-    """Convert network outputs into a discrete action."""
+def _sample_action(
+    policy: torch.nn.Module, obs: NDArray[np.floating[Any]]
+) -> tuple[int, torch.Tensor]:
+    """Sample a discrete action from torch policy logits."""
 
-    outputs = network.activate(obs)
-    # Deterministic policy: pick the argmax output index.
-    return int(np.argmax(outputs))
+    obs_tensor = torch.tensor(obs, dtype=torch.float32)
+    logits = policy(obs_tensor).squeeze(0)
+    dist = torch.distributions.Categorical(logits=logits)
+    action = dist.sample()  # type: ignore[no-untyped-call]
+    return int(action.item()), dist.log_prob(action)  # type: ignore[no-untyped-call]
+
+
+def _build_lifetime_learner(
+    config: ExperimentConfig,
+) -> ReinforceLearner | NoLearningRule:
+    if not config.rl.enabled:
+        return NoLearningRule()
+    return ReinforceLearner(
+        ReinforceConfig(
+            lr=config.rl.lr,
+            gamma=config.rl.gamma,
+            use_baseline=config.rl.use_baseline,
+        )
+    )
 
 
 def _selection_score(novelty: float, reward: float, config: ExperimentConfig) -> float:

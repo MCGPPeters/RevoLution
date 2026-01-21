@@ -21,5 +21,10 @@ experiment:
     novelty_weight: 1.0
     reward_weight: 0.05
     penalty_below_threshold: 1000000.0
+  rl:
+    enabled: true
+    lr: 0.01
+    gamma: 1.0
+    use_baseline: false
   output_dir: "runs"
   run_id: null

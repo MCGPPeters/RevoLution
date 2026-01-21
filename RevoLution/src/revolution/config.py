@@ -45,6 +45,15 @@ class SelectionConfig(BaseModel):
     penalty_below_threshold: float = 1_000_000.0
 
 
+class RLConfig(BaseModel):
+    """Lifetime learning configuration."""
+
+    enabled: bool = True
+    lr: float = 1e-2
+    gamma: float = 1.0
+    use_baseline: bool = False
+
+
 class ExperimentConfig(BaseModel):
     """Top-level experiment settings."""
 
@@ -55,6 +64,7 @@ class ExperimentConfig(BaseModel):
     env: BanditEnvConfig
     novelty: NoveltyConfig = Field(default_factory=NoveltyConfig)
     selection: SelectionConfig = Field(default_factory=SelectionConfig)
+    rl: RLConfig = Field(default_factory=RLConfig)
     output_dir: str = "runs"
     run_id: str | None = None
 
